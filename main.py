@@ -23,8 +23,6 @@ def main():
 
     full_implementation(good_ids, data, 2)
     
-
-
 def unpack_data_set(filename):
     original_data = []
     with open(filename, 'r') as read_obj:
@@ -57,9 +55,6 @@ def unpack_goods(filename):
 
     return goods 
 
-
-
-
 def list_of_pairs_helper(stuff, length): 
     pair_ret = []
     for i in range(0, len(stuff)+1):
@@ -90,23 +85,32 @@ def delete_instance_from_tree(list_of_sets, delete):
            overall_list.remove(i)
     return overall_list
 
-
+def find_skylines(overall_set):
+    final = overall_set.copy()
+    for i in overall_set:
+        for comp in final:
+            if set(i).issubset(comp) and i != comp:
+                final.remove(i)
+                break
+    return final 
 
 def full_implementation(good_ids, data, minSup): 
 
     list_of_sets = list_of_pairs_helper(good_ids, 0) # edit this so its all the sizes 
+    overall_set = list_of_sets.copy()
 
     for set_ in list_of_sets:   # organized in order of size smallest to large (2,3)  (3,4,2) 
-        x = find_support_count(data, set_)
-        print("\nfor ", set_)
-        print(x)
-        
-        if x < minSup: 
-            list_of_sets = delete_instance_from_tree(list_of_sets, set_)
+        if set_ in overall_set:
+            print("set: ", set_)
+            x = find_support_count(data, set_)
+            #print("\nfor ", set_)
+            if x < minSup: 
+                overall_set = delete_instance_from_tree(overall_set, set_)
 
-        print(list_of_sets)
+        print(overall_set)
 
-    print("final ", list_of_sets)
+    final = find_skylines(overall_set[1:])
+    print("Final Skyline  ", final)
 
 
     # delete possible set values 
