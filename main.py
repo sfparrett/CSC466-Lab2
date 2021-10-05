@@ -21,7 +21,7 @@ def main():
     goods = unpack_goods("SHORT_goods.csv")
     good_ids = goods.keys()
 
-    full_implementation(good_ids, data, 2)
+    full_implementation(good_ids, data, 0)
     
 def unpack_data_set(filename):
     original_data = []
@@ -113,9 +113,61 @@ def full_implementation(good_ids, data, minSup):
     # delete possible set values 
 
 
+def full_implementation(good_ids, data, minSup): 
+    ones = list(good_ids)
+
+    for id in ones: 
+        sup = find_support_count(data, [id])
+        if sup < minSup: 
+            ones.remove(id)
+
+    # while condition 
+
+    print(ones)
+    twos = find_2s(ones)
+    print(twos)
+    next_layer = find_next_layer(twos)
+    print(next_layer)
+    next_next_layer = find_next_layer(next_layer)
+    print(next_next_layer)
 
 
 
+
+
+
+def find_next_layer(past_layer): 
+
+    length_of_layer = len(past_layer[0])
+    next_layer = []
+
+    for i in range(len(past_layer)): 
+        A = set(past_layer[i])
+        
+        for j in range(len(past_layer)):
+            B = set(past_layer[j])
+            union = A.union(B)
+            if (len(union) == length_of_layer + 1) and (union not in next_layer):
+                next_layer.append(union)
+
+            j+=1 
+
+        i+=1 
+
+    return next_layer
+
+
+
+
+
+
+def find_2s(list_): 
+    length = len(list_)
+    return [(list_[i],list_[j]) for i in range(length) for j in range(i+1, length)]
+ 
+
+if __name__ == '__main__': 
+    main()
 
 
 
@@ -246,8 +298,6 @@ def full_implementation(good_ids, data, minSup):
 #     pass 
 
 
-if __name__ == "__main__": 
-    main()
 
 
 
@@ -300,5 +350,3 @@ if __name__ == "__main__":
 #           1234 
 
 # support count 
-
-
