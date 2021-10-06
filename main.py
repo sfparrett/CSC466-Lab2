@@ -21,7 +21,7 @@ def main():
     goods = unpack_goods("SHORT_goods.csv")
     good_ids = goods.keys()
 
-    full_implementation(good_ids, data, 0)
+    full_implementation(good_ids, data, 1)
     
 def unpack_data_set(filename):
     original_data = []
@@ -69,9 +69,6 @@ def find_support_count(data, t):  # t = tuple to find support count of
   
     for receipt_list in data:  
         receipt_set = set(receipt_list[1:])
-        # print(set(receipt_list[1:]))
-        # print(set(t))
-        # print(set(t).issubset(receipt_set))
         if set(t).issubset(receipt_set): 
             support_count += 1
 
@@ -101,7 +98,7 @@ def full_implementation(good_ids, data, minSup):
 
     for set_ in list_of_sets:   # organized in order of size smallest to large (2,3)  (3,4,2) 
         if set_ in overall_set:
-            if find_support_count(data, set_) < minSup: 
+            if find_support_count(data, set_) <= minSup: 
                 overall_set = delete_instance_from_tree(overall_set, set_)
 
         print(overall_set)
@@ -115,46 +112,81 @@ def full_implementation(good_ids, data, minSup):
 
 def full_implementation(good_ids, data, minSup): 
     ones = list(good_ids)
+    final_list = []
 
     for id in ones: 
         sup = find_support_count(data, [id])
-        if sup < minSup: 
+        if sup <= minSup: 
             ones.remove(id)
+        # else: 
+        #     final_list.append([id])
+
 
     # while condition 
+  
+    list_of_sets  = find_2s(ones)
 
-    print(ones)
-    twos = find_2s(ones)
-    print(twos)
-    next_layer = find_next_layer(twos)
-    print(next_layer)
-    next_next_layer = find_next_layer(next_layer)
-    print(next_next_layer)
+    while len(list_of_sets) > 1: 
+    
+        for set_ in list_of_sets:   # organized in order of size smallest to large (2,3)  (3,4,2) 
+            print("\nlist of sets ",list_of_sets)
+            print("set ", set_)
+            print(type(set_))
+            print("support count ", find_support_count(data, set_))
+            if find_support_count(data, set_) <= minSup: 
+                list_of_sets = delete_instance_from_tree(list_of_sets, set_)
+            else: 
+                final_list.append(set_)
+            
+        list_of_sets = find_next_layer(list_of_sets)
+        if list_of_sets == False: 
+            break 
+    
 
+    print(list_of_sets)
+    
+    print("FINAL LIST before skyline ", final_list)
+
+    skyline = find_skylines(list_of_sets[1:])
+    print(skyline)
+
+
+        
+
+
+    # print(ones)
+    # twos = find_2s(ones)
+    # print(twos)
+    # next_layer = find_next_layer(twos)
+    # print(next_layer)
+    # next_next_layer = find_next_layer(next_layer)
+    # print(next_next_layer)
 
 
 
 
 
 def find_next_layer(past_layer): 
+    if past_layer == []: 
+        return False 
+    else: 
+        length_of_layer = len(past_layer[0])
+        next_layer = []
 
-    length_of_layer = len(past_layer[0])
-    next_layer = []
+        for i in range(len(past_layer)): 
+            A = set(past_layer[i])
+            
+            for j in range(len(past_layer)):
+                B = set(past_layer[j])
+                union = A.union(B)
+                if (len(union) == length_of_layer + 1) and (union not in next_layer):
+                    next_layer.append(union)
 
-    for i in range(len(past_layer)): 
-        A = set(past_layer[i])
-        
-        for j in range(len(past_layer)):
-            B = set(past_layer[j])
-            union = A.union(B)
-            if (len(union) == length_of_layer + 1) and (union not in next_layer):
-                next_layer.append(union)
+                j+=1 
 
-            j+=1 
+            i+=1 
 
-        i+=1 
-
-    return next_layer
+        return next_layer
 
 
 
