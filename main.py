@@ -8,6 +8,9 @@ import itertools
 # 3, 16, 32
 # 4, 18, 24, 35
 
+# "5000-out1.csv"
+# "goods.csv"
+
 
 # Following the Apirori Algorithm in : https://www.geeksforgeeks.org/apriori-algorithm/
 
@@ -17,11 +20,11 @@ from csv import reader
 
 
 def main(): 
-    data = unpack_data_set("SHORT_receipts_&_goods.csv")
-    goods = unpack_goods("SHORT_goods.csv")
+    data = unpack_data_set("5000-out1.csv")
+    goods = unpack_goods("goods.csv")
     good_ids = goods.keys()
 
-    full_implementation(good_ids, data, 1)
+    full_implementation(good_ids, data, 8)
     
 def unpack_data_set(filename):
     original_data = []
@@ -37,7 +40,7 @@ def unpack_data_set(filename):
             
             original_data.append(int_)
 
-    print(original_data)
+    # print(original_data)
     return original_data
 
 def unpack_goods(filename):
@@ -68,7 +71,12 @@ def find_support_count(data, t):  # t = tuple to find support count of
     support_count = 0
   
     for receipt_list in data:  
+
         receipt_set = set(receipt_list[1:])
+        # if(t == (41, 47)):
+        #     print(data)
+        #     break
+        #     print("rec_set ", receipt_set)
         if set(t).issubset(receipt_set): 
             support_count += 1
 
@@ -91,20 +99,18 @@ def find_skylines(overall_set):
                 break
     return final 
 
-def full_implementation(good_ids, data, minSup): 
+# def full_implementation(good_ids, data, minSup): 
+#     list_of_sets = candidate_generator(good_ids, 0) # edit this so its all the sizes 
+#     overall_set = list_of_sets.copy()
 
-    list_of_sets = candidate_generator(good_ids, 0) # edit this so its all the sizes 
-    overall_set = list_of_sets.copy()
-
-    for set_ in list_of_sets:   # organized in order of size smallest to large (2,3)  (3,4,2) 
-        if set_ in overall_set:
-            if find_support_count(data, set_) <= minSup: 
-                overall_set = delete_instance_from_tree(overall_set, set_)
-
-        print(overall_set)
-
-    final = find_skylines(overall_set[1:])
-    print("Final Skyline  ", final)
+#     for set_ in list_of_sets:   # organized in order of size smallest to large (2,3)  (3,4,2) 
+#         if set_ in overall_set:
+#             if find_support_count(data, set_) <= minSup: 
+#                 overall_set = delete_instance_from_tree(overall_set, set_)
+            
+#         print(overall_set)
+#     final = find_skylines(overall_set[1:])
+#     print("Final Skyline  ", final)
 
 
     # delete possible set values 
@@ -113,42 +119,45 @@ def full_implementation(good_ids, data, minSup):
 def full_implementation(good_ids, data, minSup): 
     ones = list(good_ids)
     final_list = []
-
-    for id in ones: 
+    for id in ones: # pandas df.table - will give counts on df
         sup = find_support_count(data, [id])
         if sup <= minSup: 
             ones.remove(id)
-        # else: 
-        #     final_list.append([id])
-
-
-    # while condition 
-  
+    
     list_of_sets  = find_2s(ones)
 
-    while len(list_of_sets) > 1: 
+    i = 0
+    x = len(ones) - 2
+    y = 0
+    while x > i: #what condition do we do it on? 
+
+        # pandas df.table - will give counts on df of lists of lists
     
         for set_ in list_of_sets:   # organized in order of size smallest to large (2,3)  (3,4,2) 
             print("\nlist of sets ",list_of_sets)
             print("set ", set_)
-            print(type(set_))
+            # print(type(set_))
             print("support count ", find_support_count(data, set_))
             if find_support_count(data, set_) <= minSup: 
-                list_of_sets = delete_instance_from_tree(list_of_sets, set_)
+                list_of_sets = delete_instance_from_tree(list_of_sets, set_) #delete function 
             else: 
-                final_list.append(set_)
-            
+                final_list.append(list(set_))
+        #     if(set_ == (41, 49)):
+        #         y = 1
+        #         break
+
+        # if(y == 1):
+        #     break    
+        #print("List of Set1 ", list_of_sets)
         list_of_sets = find_next_layer(list_of_sets)
+        #print("List of Set2 ", list_of_sets)
         if list_of_sets == False: 
             break 
-    
+        i = i + 1
 
-    print(list_of_sets)
-    
-    print("FINAL LIST before skyline ", final_list)
 
-    skyline = find_skylines(list_of_sets[1:])
-    print(skyline)
+    skyline = find_skylines(final_list)
+    print("Skyline ", skyline)
 
 
         
@@ -175,15 +184,12 @@ def find_next_layer(past_layer):
 
         for i in range(len(past_layer)): 
             A = set(past_layer[i])
-            
             for j in range(len(past_layer)):
                 B = set(past_layer[j])
                 union = A.union(B)
                 if (len(union) == length_of_layer + 1) and (union not in next_layer):
                     next_layer.append(union)
-
                 j+=1 
-
             i+=1 
 
         return next_layer
