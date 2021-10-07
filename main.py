@@ -1,5 +1,8 @@
 import pandas as pd
 import itertools
+import numpy as np
+import math
+import time
 
 # DATA being used: 5000-out1.csv 
 # goods.id    receipt.id 
@@ -20,18 +23,54 @@ from pandas.io.pytables import dropna_doc
 # open file in read mode
 
 
+def csv_grab(x):
+    if(x == 1):
+        return "5000-out1.csv"
+    elif(x == 2):
+        return "20000-out1.csv"
+    elif(x == 3):
+        return "75000-out1.csv"
+    elif(x==4):
+        return "authorlist.psv", "bingoBaskets.csv"
+    else:
+        return 6
+
 
 def main(): 
-    # data = unpack_data_set("5000-out1.csv")
-    # goods = unpack_goods("goods.csv")
-    data = unpack_data_set("SHORT_receipts_&_goods.csv")
-    goods = unpack_goods("SHORT_goods.csv")
-    good_ids = goods.keys()
-
-    # data = pd.read_csv("SHORT_receipts_&_goods.csv")
-    # good_ids = pd.read_csv("SHORT_goods.csv")
-
-    full_implementation(good_ids, data, 3)
+    print()
+    print("CSV Files:")
+    print("1: 5000-out1.csv, 2: 20000-out1.csv, 3: 75000-out1.csv, 4: authorlist.psv/bingoBaskets.csv, 5: All")
+    print()
+    x = int(input("Which CSV do you want to Analyze: "))
+    x = csv_grab(x)
+    minSup = float(input("What support level "))
+    if (x == 6):
+        fil = ["5000-out1.csv", "20000-out1.csv", "75000-out1.csv", ["authorlist.psv", 'bingoBaskets.csv']]
+        for i in fil:
+            print()
+            if (i[0] == "authorlist.psv"):
+                print("Bingo Set:")
+                data = unpack_data_set(i[1])
+                goods = pd.read_csv(i[0],skiprows=1,sep='|', names=[1, 'Names']).set_index(1).index.values.tolist()
+                goods.insert(0,1)
+                full_implementation(goods, data, minSup)
+            else:
+                print(i+":")
+                data = unpack_data_set(i)
+                goods = pd.read_csv("goods.csv").index.values
+                full_implementation(goods, data, minSup)
+        return
+    elif (x[0] == "authorlist.psv"):
+        data = unpack_data_set(x[1])
+        goods = pd.read_csv(x[0],skiprows=1,sep='|', names=[1, 'Names']).set_index(1).index.values.tolist()
+        goods.insert(0,1)
+        print(goods)
+        full_implementation(goods, data, minSup)
+        return
+    else:
+        data = unpack_data_set(x)
+        goods = pd.read_csv("goods.csv").index.values
+        full_implementation(goods, data, minSup)
     
 def unpack_data_set(filename):
     original_data = []
@@ -74,8 +113,14 @@ def candidate_generator(stuff, length):
     return pair_ret
 
 
-def find_support_count(data, minSup):
-    return 
+def find_support_prune(data, list_set, minSup):
+    overall = []
+    for i in list_set:
+        df = data[i].all(axis=1).value_counts().to_frame().transpose()
+        if True in df.columns:
+            if (df[True][0]/len(data.index) >= minSup):
+                overall.append(i)
+    return overall
 
 # def find_support_count(data, t):  # t = tuple to find support count of 
 #     support_count = 0
@@ -83,10 +128,6 @@ def find_support_count(data, minSup):
 #     for receipt_list in data:  
 
 #         receipt_set = set(receipt_list[1:])
-#         # if(t == (41, 47)):
-#         #     print(data)
-#         #     break
-#         #     print("rec_set ", receipt_set)
 #         if set(t).issubset(receipt_set): 
 #             support_count += 1
 
@@ -103,10 +144,9 @@ def delete_instance_from_tree(list_of_sets, delete):
 def find_skylines(overall_set):
     final = overall_set.copy()
     for i in overall_set:
-        for comp in final:
-            if set(i).issubset(comp) and i != comp:
+        for c in final:
+            if set(i).issubset(c) and i != c and i in final:
                 final.remove(i)
-                break
     return final 
 
 # def full_implementation(good_ids, data, minSup): 
@@ -127,14 +167,40 @@ def find_skylines(overall_set):
 
 def find_2s(list_): 
     length = len(list_)
-    return [(list_[i],list_[j]) for i in range(length) for j in range(i+1, length)]
+    return [[list_[i],list_[j]] for i in range(length) for j in range(i+1, length)]
+
+def one_hot_encoding(l_data, good_ids):
+    mapping = {}
+    for x in range(len(good_ids)):
+        mapping[good_ids[x]] = x
+
+    
+    one_hot_encode = []
+    
+    for data in l_data:
+        arr = list(np.zeros(len(good_ids), dtype = int))
+        for c in data:
+            if math.isnan(c):
+                continue
+            arr[mapping[c]] = 1
+        one_hot_encode.append(arr)
+
+    return one_hot_encode
 
 def full_implementation(good_ids, data, minSup): 
-    data = pd.DataFrame(data).set_index(0)
-    df = pd.DataFrame(data.apply(pd.Series.value_counts, axis=1).sum())
-    df = df[df[0] >= minSup].reset_index()
-    ones = df["index"].to_list()
-    print(ones)
+    start = time.perf_counter()
+
+
+    final_list = []
+    data = pd.DataFrame(data).set_index(0).values.tolist()
+    #print("In One Hot")
+    data = one_hot_encoding(data, good_ids)
+    #print("Out One Hot")
+    data = pd.DataFrame(data)
+    df = pd.DataFrame(data.sum(axis=0))
+    ones = df[df[0]/len(data.index) >= minSup].index.to_list() #do we want > or >=
+    for i in ones:
+        final_list.append(list(map(int, str(i))))
 
     # ones = list(good_ids)
     # final_list = []
@@ -144,32 +210,24 @@ def full_implementation(good_ids, data, minSup):
     #         ones.remove(id)
     
     list_of_sets  = find_2s(ones)
+    list_of_sets = find_support_prune(data, list_of_sets, minSup)
 
-    df = pd.DataFrame(list_of_sets)
-    print(df)
-
-    kw = [1]
-    print()
-    print(df.groupby(0,1).apply(lambda x: x if [k in x for k in kw] else None))
-    
-    print()
-    print(data)
-    print()
+    for i in list_of_sets:
+        final_list.append(i)
 
 
-    
-    
-
-
-    return
+    # kw = [1]
+    # print()
+    # df = pd.DataFrame(df.apply(pd.Series).where(df == kw).count(axis=1))
+    # print(df)
+    # final = df[df[0]==2].count()
+    # print(final)
 
     i = 0
     x = len(ones) - 2
     y = 0
-    while x > i: #what condition do we do it on? 
-        
+    while x > i:
         # pandas df.table - will give counts on df of lists of lists
-    
         # for set_ in list_of_sets:   # organized in order of size smallest to large (2,3)  (3,4,2) 
         #     print("\nlist of sets ",list_of_sets)
         #     print("set ", set_)
@@ -184,21 +242,35 @@ def full_implementation(good_ids, data, minSup):
         #         break
 
         # if(y == 1):
-        #     break    
-        #print("List of Set1 ", list_of_sets)
+        #     break  
+
+        #print("In Next Layer")
+        #tic = time.perf_counter()
         list_of_sets = find_next_layer(list_of_sets)
-        #print("List of Set2 ", list_of_sets)
         if list_of_sets == False: 
             break 
+        #toc = time.perf_counter()
+        #print(f"Finished in {toc - tic:0.4f} seconds")
+        #print("Out Next Layer")
+        
+        #print("In Support Prune")
+        #tic = time.perf_counter()
+        list_of_sets = find_support_prune(data, list_of_sets, minSup)
+        toc = time.perf_counter()
+        #print("Out Support Prune")
+        #print(f"Finished in {toc - tic:0.4f} seconds")
+
+        for list_ in list_of_sets:
+            final_list.append(list_)
         i = i + 1
 
-
+    #print("Final ", final_list)
     skyline = find_skylines(final_list)
-    print("Skyline ", skyline)
-
-
-        
-
+    final = time.perf_counter()
+    print(skyline)
+    print(f"Algorithm Speed {final - start:0.4f} seconds")
+    # for i in skyline:
+    #     print(i)
 
     # print(ones)
     # twos = find_2s(ones)
@@ -218,7 +290,6 @@ def find_next_layer(past_layer):
     else: 
         length_of_layer = len(past_layer[0])
         next_layer = []
-
         for i in range(len(past_layer)): 
             A = set(past_layer[i])
             for j in range(len(past_layer)):
@@ -228,17 +299,9 @@ def find_next_layer(past_layer):
                     next_layer.append(union)
                 j+=1 
             i+=1 
-
+        next_layer = list(map(list, next_layer))
         return next_layer
-
-
-
-
-
-
-
  
-
 if __name__ == '__main__': 
     main()
 
