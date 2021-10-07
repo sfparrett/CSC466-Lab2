@@ -15,16 +15,23 @@ import itertools
 # Following the Apirori Algorithm in : https://www.geeksforgeeks.org/apriori-algorithm/
 
 from csv import reader
+
+from pandas.io.pytables import dropna_doc
 # open file in read mode
 
 
 
 def main(): 
-    data = unpack_data_set("5000-out1.csv")
-    goods = unpack_goods("goods.csv")
+    # data = unpack_data_set("5000-out1.csv")
+    # goods = unpack_goods("goods.csv")
+    data = unpack_data_set("SHORT_receipts_&_goods.csv")
+    goods = unpack_goods("SHORT_goods.csv")
     good_ids = goods.keys()
 
-    full_implementation(good_ids, data, 8)
+    # data = pd.read_csv("SHORT_receipts_&_goods.csv")
+    # good_ids = pd.read_csv("SHORT_goods.csv")
+
+    full_implementation(good_ids, data, 3)
     
 def unpack_data_set(filename):
     original_data = []
@@ -67,20 +74,23 @@ def candidate_generator(stuff, length):
     return pair_ret
 
 
-def find_support_count(data, t):  # t = tuple to find support count of 
-    support_count = 0
+def find_support_count(data, minSup):
+    return 
+
+# def find_support_count(data, t):  # t = tuple to find support count of 
+#     support_count = 0
   
-    for receipt_list in data:  
+#     for receipt_list in data:  
 
-        receipt_set = set(receipt_list[1:])
-        # if(t == (41, 47)):
-        #     print(data)
-        #     break
-        #     print("rec_set ", receipt_set)
-        if set(t).issubset(receipt_set): 
-            support_count += 1
+#         receipt_set = set(receipt_list[1:])
+#         # if(t == (41, 47)):
+#         #     print(data)
+#         #     break
+#         #     print("rec_set ", receipt_set)
+#         if set(t).issubset(receipt_set): 
+#             support_count += 1
 
-    return support_count
+#     return support_count
     
 
 def delete_instance_from_tree(list_of_sets, delete): 
@@ -115,33 +125,60 @@ def find_skylines(overall_set):
 
     # delete possible set values 
 
+def find_2s(list_): 
+    length = len(list_)
+    return [(list_[i],list_[j]) for i in range(length) for j in range(i+1, length)]
 
 def full_implementation(good_ids, data, minSup): 
-    ones = list(good_ids)
-    final_list = []
-    for id in ones: # pandas df.table - will give counts on df
-        sup = find_support_count(data, [id])
-        if sup <= minSup: 
-            ones.remove(id)
+    data = pd.DataFrame(data).set_index(0)
+    df = pd.DataFrame(data.apply(pd.Series.value_counts, axis=1).sum())
+    df = df[df[0] >= minSup].reset_index()
+    ones = df["index"].to_list()
+    print(ones)
+
+    # ones = list(good_ids)
+    # final_list = []
+    # for id in ones: # pandas df.table - will give counts on df
+    #     sup = find_support_count(data, [id])
+    #     if sup <= minSup: 
+    #         ones.remove(id)
     
     list_of_sets  = find_2s(ones)
+
+    df = pd.DataFrame(list_of_sets)
+    print(df)
+
+    kw = [1]
+    print()
+    print(df.groupby(0,1).apply(lambda x: x if [k in x for k in kw] else None))
+    
+    print()
+    print(data)
+    print()
+
+
+    
+    
+
+
+    return
 
     i = 0
     x = len(ones) - 2
     y = 0
     while x > i: #what condition do we do it on? 
-
+        
         # pandas df.table - will give counts on df of lists of lists
     
-        for set_ in list_of_sets:   # organized in order of size smallest to large (2,3)  (3,4,2) 
-            print("\nlist of sets ",list_of_sets)
-            print("set ", set_)
-            # print(type(set_))
-            print("support count ", find_support_count(data, set_))
-            if find_support_count(data, set_) <= minSup: 
-                list_of_sets = delete_instance_from_tree(list_of_sets, set_) #delete function 
-            else: 
-                final_list.append(list(set_))
+        # for set_ in list_of_sets:   # organized in order of size smallest to large (2,3)  (3,4,2) 
+        #     print("\nlist of sets ",list_of_sets)
+        #     print("set ", set_)
+        #     # print(type(set_))
+        #     print("support count ", find_support_count(data, set_))
+        #     if find_support_count(data, set_) <= minSup: 
+        #         list_of_sets = delete_instance_from_tree(list_of_sets, set_) #delete function 
+        #     else: 
+        #         final_list.append(list(set_))
         #     if(set_ == (41, 49)):
         #         y = 1
         #         break
@@ -199,9 +236,7 @@ def find_next_layer(past_layer):
 
 
 
-def find_2s(list_): 
-    length = len(list_)
-    return [(list_[i],list_[j]) for i in range(length) for j in range(i+1, length)]
+
  
 
 if __name__ == '__main__': 
